@@ -3,43 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Weather app</title>
+  <meta name="description" content="A responsive weather dashboard with live weather data and no API key required.">
+  <title>Weather Dashboard</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-   <div class="card">
-    <div class="search">
-       <input type="text" placeholder="Enter your name" spellcheck="false">
-       <button><img src="search.png"></button>
-    </div>
-    <div class="error">
-      Invalid city name
-    </div>
-    <div class="weather">
-      <img src="rain.png" class="weather-icon">
-      <h1 class="temp">25°C</h1>
-      <h2 class="city">Mumbai</h2>
+  <main class="card">
+    <form class="search" role="search" onsubmit="return false;">
+      <label class="sr-only" for="cityInput">City name</label>
+      <input id="cityInput" type="search" placeholder="Enter a city" autocomplete="off" spellcheck="false">
+      <button type="button" aria-label="Search weather"><img src="search.png" alt=""></button>
+    </form>
+
+    <p class="error" role="alert">City not found</p>
+
+    <section class="weather" aria-live="polite">
+      <img src="rain.png" class="weather-icon" alt="Weather condition">
+      <p class="condition">Current conditions</p>
+      <h1 class="temp">--°C</h1>
+      <h2 class="city">Loading...</h2>
       <div class="details">
         <div class="col">
           <img src="humidity.png" alt="">
-          <div>
-            <p class="humidity">50%</p>
-            <p>Humadity</p>
-          </div>
+          <div><p class="humidity">--%</p><p>Humidity</p></div>
         </div>
-        
-          <div class="col">
-            <img src="wind.png" alt="">
-            <div>
-              <p class="wind">15 km/h</p>
-              <p>wind Speed</p>
-            </div>
-        
+        <div class="col">
+          <img src="wind.png" alt="">
+          <div><p class="wind">-- km/h</p><p>Wind speed</p></div>
+        </div>
       </div>
-     </div>
-   </div>
-
-   
-   <script src="script.js"></script>
+    </section>
+  </main>
+  <script src="script.js"></script>
 </body>
 </html>
