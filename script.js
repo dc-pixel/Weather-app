@@ -1,48 +1,67 @@
-const apiKey="0c11db53a7edb1e4f68175a989eb3bd1";
-const apiUrl= "https://api.openweathermap.org/data/2.5/weather?units=metric&q=";
+const searchBox = document.querySelector('.search input');
+const searchBtn = document.querySelector('.search button');
+const weatherIcon = document.querySelector('.weather-icon');
+const weather = document.querySelector('.weather');
+const error = document.querySelector('.error');
 
-const searchBox=document.querySelector(" .search input");
-const searchBtn=document.querySelector(" .search button");
-const weatherIcon=document.querySelector(".weather-icon");
+const weatherCodes = {
+  0: ['Clear sky', 'clear.png'],
+  1: ['Mainly clear', 'clear.png'], 2: ['Partly cloudy', 'clouds.png'], 3: ['Overcast', 'clouds.png'],
+  45: ['Fog', 'mist.png'], 48: ['Rime fog', 'mist.png'],
+  51: ['Light drizzle', 'drizzle.png'], 53: ['Drizzle', 'drizzle.png'], 55: ['Heavy drizzle', 'drizzle.png'],
+  61: ['Light rain', 'rain.png'], 63: ['Rain', 'rain.png'], 65: ['Heavy rain', 'rain.png'],
+  71: ['Light snow', 'snow.png'], 73: ['Snow', 'snow.png'], 75: ['Heavy snow', 'snow.png'],
+  80: ['Rain showers', 'rain.png'], 81: ['Rain showers', 'rain.png'], 82: ['Heavy showers', 'rain.png'],
+  95: ['Thunderstorm', 'rain.png'], 96: ['Thunderstorm with hail', 'rain.png'], 99: ['Thunderstorm with hail', 'rain.png']
+};
 
-async function cheakWeather(city){
-    const responce=await fetch(apiUrl + city+ `&appid=${apiKey}`);
-    
-    if(responce.status==404){
-        document.querySelector(".error").style.display="block"
-        document.querySelector(".weather").style.display="none"
-    }
-    else{
-        let data= await responce.json();
-
-        document.querySelector(".city").innerHTML=data.name;
-        document.querySelector(".temp").innerHTML= Math.round(data.main.temp) + "°C";
-        document.querySelector(".humidity").innerHTML=data.main.humidity+"%";
-        document.querySelector(".wind").innerHTML=data.wind.speed+"km/h";
-    
-        if(data.weather[0].main=="Clouds"){
-            weatherIcon.src="clouds.png";
-        }
-        else if(data.weather[0].main=="Clear"){
-            weatherIcon.src="clear.png";
-        } 
-        else if(data.weather[0].main=="Rain"){
-            weatherIcon.src="rain.png";
-        }
-        else if(data.weather[0].main=="Drizzle"){
-            weatherIcon.src="drizzle.png";
-        }
-        else if(data.weather[0].main=="Mist"){
-            weatherIcon.src="mist.png";
-        }
-        
-        document.querySelector(".weather").style.display= "block";
-        document.querySelector(".error").style.display="none"
-    }
-
+function showError(message = 'City not found') {
+  error.textContent = message;
+  error.style.display = 'block';
+  weather.style.display = 'none';
 }
 
-searchBtn.addEventListener("click" , (e) => {
-   e.preventDefault();
-   cheakWeather(searchBox.value);
-})
+async function checkWeather(city) {
+  const name = city.trim();
+  if (!name) return showError('Please enter a city name');
+
+  searchBtn.disabled = true;
+  searchBtn.setAttribute('aria-busy', 'true');
+
+  try {
+    const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`);
+    if (!geoResponse.ok) throw new Error('Geocoding request failed');
+    const geo = await geoResponse.json();
+    const location = geo.results?.[0];
+    if (!location) return showError('City not found');
+
+    const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`);
+    if (!weatherResponse.ok) throw new Error('Weather request failed');
+    const data = await weatherResponse.json();
+    const current = data.current;
+    const [description, icon] = weatherCodes[current.weather_code] || ['Current conditions', 'clouds.png'];
+
+    document.querySelector('.city').textContent = location.country ? `${location.name}, ${location.country}` : location.name;
+    document.querySelector('.temp').textContent = `${Math.round(current.temperature_2m)}°C`;
+    document.querySelector('.humidity').textContent = `${current.relative_humidity_2m}%`;
+    document.querySelector('.wind').textContent = `${Math.round(current.wind_speed_10m)} km/h`;
+    document.querySelector('.condition').textContent = description;
+    weatherIcon.src = icon;
+    weatherIcon.alt = description;
+    weather.style.display = 'block';
+    error.style.display = 'none';
+  } catch (err) {
+    console.error(err);
+    showError('Unable to load weather. Please try again.');
+  } finally {
+    searchBtn.disabled = false;
+    searchBtn.removeAttribute('aria-busy');
+  }
+}
+
+searchBtn.addEventListener('click', () => checkWeather(searchBox.value));
+searchBox.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') checkWeather(searchBox.value);
+});
+
+checkWeather('Meerut');
