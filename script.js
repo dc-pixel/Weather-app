@@ -21,6 +21,17 @@ function showError(message = 'City not found') {
   weather.style.display = 'none';
 }
 
+async function fetchWithTimeout(url, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function checkWeather(city) {
   const name = city.trim();
   if (!name) return showError('Please enter a city name');
@@ -29,13 +40,13 @@ async function checkWeather(city) {
   searchBtn.setAttribute('aria-busy', 'true');
 
   try {
-    const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`);
+    const geoResponse = await fetchWithTimeout(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`);
     if (!geoResponse.ok) throw new Error('Geocoding request failed');
     const geo = await geoResponse.json();
     const location = geo.results?.[0];
     if (!location) return showError('City not found');
 
-    const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`);
+    const weatherResponse = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`);
     if (!weatherResponse.ok) throw new Error('Weather request failed');
     const data = await weatherResponse.json();
     const current = data.current;
@@ -52,7 +63,7 @@ async function checkWeather(city) {
     error.style.display = 'none';
   } catch (err) {
     console.error(err);
-    showError('Unable to load weather. Please try again.');
+    showError(err.name === 'AbortError' ? 'Weather request timed out. Please try again.' : 'Unable to load weather. Please try again.');
   } finally {
     searchBtn.disabled = false;
     searchBtn.removeAttribute('aria-busy');
