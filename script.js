@@ -1,5 +1,6 @@
 const searchBox = document.querySelector('.search input');
 const searchBtn = document.querySelector('.search button');
+const searchForm = document.querySelector('.search');
 const weatherIcon = document.querySelector('.weather-icon');
 const weather = document.querySelector('.weather');
 const error = document.querySelector('.error');
@@ -70,9 +71,9 @@ async function checkWeather(city) {
   }
 }
 
-searchBtn.addEventListener('click', () => checkWeather(searchBox.value));
-searchBox.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') checkWeather(searchBox.value);
+searchForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  checkWeather(searchBox.value);
 });
 
 checkWeather('Meerut');
