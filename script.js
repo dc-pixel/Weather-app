@@ -51,6 +51,9 @@ async function checkWeather(city) {
     if (!weatherResponse.ok) throw new Error('Weather request failed');
     const data = await weatherResponse.json();
     const current = data.current;
+    if (!current || ['temperature_2m', 'relative_humidity_2m', 'wind_speed_10m', 'weather_code'].some((key) => current[key] === undefined)) {
+      throw new Error('Incomplete weather response');
+    }
     const [description, icon] = weatherCodes[current.weather_code] || ['Current conditions', 'clouds.png'];
 
     document.querySelector('.city').textContent = location.country ? `${location.name}, ${location.country}` : location.name;
