@@ -33,10 +33,13 @@ async function fetchWithTimeout(url, timeoutMs = 10000) {
   }
 }
 
+let requestId = 0;
+
 async function checkWeather(city) {
   const name = city.trim();
   if (!name) return showError('Please enter a city name');
 
+  const currentRequestId = ++requestId;
   searchBtn.disabled = true;
   searchBtn.setAttribute('aria-busy', 'true');
 
@@ -54,6 +57,7 @@ async function checkWeather(city) {
     if (!current || ['temperature_2m', 'relative_humidity_2m', 'wind_speed_10m', 'weather_code'].some((key) => current[key] === undefined)) {
       throw new Error('Incomplete weather response');
     }
+    if (currentRequestId !== requestId) return;
     const [description, icon] = weatherCodes[current.weather_code] || ['Current conditions', 'clouds.png'];
 
     document.querySelector('.city').textContent = location.country ? `${location.name}, ${location.country}` : location.name;
@@ -66,11 +70,14 @@ async function checkWeather(city) {
     weather.style.display = 'block';
     error.style.display = 'none';
   } catch (err) {
+    if (currentRequestId !== requestId) return;
     console.error(err);
     showError(err.name === 'AbortError' ? 'Weather request timed out. Please try again.' : 'Unable to load weather. Please try again.');
   } finally {
-    searchBtn.disabled = false;
-    searchBtn.removeAttribute('aria-busy');
+    if (currentRequestId === requestId) {
+      searchBtn.disabled = false;
+      searchBtn.removeAttribute('aria-busy');
+    }
   }
 }
 
