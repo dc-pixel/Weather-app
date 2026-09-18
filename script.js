@@ -48,6 +48,7 @@ async function checkWeather(city) {
     if (!geoResponse.ok) throw new Error('Geocoding request failed');
     const geo = await geoResponse.json();
     const location = geo.results?.[0];
+    if (currentRequestId !== requestId) return;
     if (!location) return showError('City not found');
 
     const weatherResponse = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`);
