@@ -22,36 +22,47 @@ function showError(message = 'City not found') {
   weather.style.display = 'none';
 }
 
-async function fetchWithTimeout(url, timeoutMs = 10000) {
+async function fetchWithTimeout(url, timeoutMs = 10000, signal) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const abortRequest = () => controller.abort();
+
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener('abort', abortRequest, { once: true });
+  }
 
   try {
     return await fetch(url, { signal: controller.signal });
   } finally {
     clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', abortRequest);
   }
 }
 
 let requestId = 0;
+let activeRequestController = null;
 
 async function checkWeather(city) {
   const name = city.trim();
   if (!name) return showError('Please enter a city name');
 
+  activeRequestController?.abort();
+  const requestController = new AbortController();
+  activeRequestController = requestController;
   const currentRequestId = ++requestId;
   searchBtn.disabled = true;
   searchBtn.setAttribute('aria-busy', 'true');
 
   try {
-    const geoResponse = await fetchWithTimeout(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`);
+    const geoResponse = await fetchWithTimeout(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`, 10000, requestController.signal);
     if (!geoResponse.ok) throw new Error('Geocoding request failed');
     const geo = await geoResponse.json();
     const location = geo.results?.[0];
     if (currentRequestId !== requestId) return;
     if (!location) return showError('City not found');
 
-    const weatherResponse = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`);
+    const weatherResponse = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`, 10000, requestController.signal);
     if (!weatherResponse.ok) throw new Error('Weather request failed');
     const data = await weatherResponse.json();
     const current = data.current;
@@ -75,6 +86,7 @@ async function checkWeather(city) {
     console.error(err);
     showError(err.name === 'AbortError' ? 'Weather request timed out. Please try again.' : 'Unable to load weather. Please try again.');
   } finally {
+    if (activeRequestController === requestController) activeRequestController = null;
     if (currentRequestId === requestId) {
       searchBtn.disabled = false;
       searchBtn.removeAttribute('aria-busy');
